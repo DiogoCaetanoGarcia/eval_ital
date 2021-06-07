@@ -1,0 +1,17 @@
+pes_dou  - pesquisadores doutorado	
+pes_mes	 - pesquisadores mestrado
+pes_gra	 - pesquisadores graduação
+pes_tot	 - pesquisadores totais
+pub_dou	 - publicações doutorado
+pub_mes	 - publicações mestrado
+pub_gra	 - publicações graduação
+pub_tot	 - publicações totais
+LLA	 - Linguística, letras e artes
+CH	 - ciências humanas
+CB	 - ciências biológicas
+CA	 - ciências agrônomas
+CET	 - Ciências exatas e da terra
+ND	 - nada consta
+CSA	 - Ciências sociais aplicadas
+EG	 - engenharias
+CS       - ciências da saúde

@@ -8,18 +8,21 @@ def find_fields(xml_file_name, elms_attrs):
 	cur_list = []
 	for elms in elms_attrs:
 		itemlist = xmldoc.getElementsByTagName(elms[1])
-		if elms[3]:
-			cur_list.append(str(len(itemlist)))
+		if (len(itemlist)==0) or (not itemlist[0].getAttribute(elms[2])):
+			if elms[3]:
+				cur_list.append("0")
+			else:
+				cur_list.append('')
 		else:
-			if len(itemlist):
+			if elms[3]:
+				cur_list.append(str(len(itemlist)))
+			else:
 				if len(itemlist)==1:
 					cur_list.append(itemlist[0].attributes[elms[2]].value)
 				else:
 					vals = [il.attributes[elms[2]].value for il in itemlist]
 					s = ', '
 					cur_list.append(s.join(list(set(vals))))
-			else:
-				cur_list.append('')
 	return cur_list
 
 def xmls_2_xlsx(xml_file_folder, elms_attrs, output_file_name):
@@ -42,19 +45,24 @@ def xmls_2_xlsx(xml_file_folder, elms_attrs, output_file_name):
 	wb.save(newfilename)
 	return
 
-folder = "Dados/"
+folder = "data/2021_04/" #Dados/"
 # folder = "Testes/"
 
 xml_fields = [
 	['Nome','DADOS-GERAIS','NOME-COMPLETO', False],
 	['País de nascimento','DADOS-GERAIS','PAIS-DE-NASCIMENTO', False],
+	['Data de atualização', 'CURRICULO-VITAE', 'DATA-ATUALIZACAO', False],
+	['Id Lattes', 'CURRICULO-VITAE', 'NUMERO-IDENTIFICADOR', False],
+	['País de atuação', 'ENDERECO-PROFISSIONAL', 'PAIS', False],
 	['Cidade', 'ENDERECO-PROFISSIONAL', 'CIDADE', False],
 	['Estado', 'ENDERECO-PROFISSIONAL', 'UF', False],
 	['Instituição', 'ENDERECO-PROFISSIONAL', 'NOME-INSTITUICAO-EMPRESA', False],
 	['Órgão', 'ENDERECO-PROFISSIONAL', 'NOME-ORGAO', False],
 	['Unidade', 'ENDERECO-PROFISSIONAL', 'NOME-UNIDADE', False],
 	['CEP', 'ENDERECO-PROFISSIONAL', 'CEP', False],
+	['Doutorado', 'DOUTORADO', 'ANO-DE-CONCLUSAO', False],
 	['Doutorado', 'DOUTORADO', 'ANO-DE-OBTENCAO-DO-TITULO', False],
+	['Mestrado', 'MESTRADO', 'ANO-DE-CONCLUSAO', False],
 	['Mestrado', 'MESTRADO', 'ANO-DE-OBTENCAO-DO-TITULO', False],
 	['Especialização', 'ESPECIALIZACAO', 'ANO-DE-CONCLUSAO', False],
 	['Graduação', 'GRADUACAO', 'ANO-DE-CONCLUSAO', False],
