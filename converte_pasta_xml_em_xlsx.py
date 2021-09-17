@@ -88,7 +88,7 @@ xml_fields = [['Nome','DADOS-GERAIS',['NOME-COMPLETO'], False, False],
 # Incluir códigos das instituições (graduação, mestrado e doutorado) - ok
 # Conferir origem desses códigos (Google, email ou falar com fuinha)
 #    http://di.cnpq.br/di/index.jsp
-#    http://lattes.cnpq.br/web/dgp/por-instituicao4
+
 # Instituição atual onde trabalha é o mais importante. Vínculo atual é importante também - ok
 # Incluir contagem de projetos - ok
 # Separar brasileiros formados na Itália (graduação etc.)
