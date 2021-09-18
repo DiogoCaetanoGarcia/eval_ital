@@ -7,22 +7,24 @@ def find_fields(xml_file_name, elms_attrs):
 	xmldoc = minidom.parse(xml_file_name) # Read XML file
 	cur_list = []
 	for elms in elms_attrs:
-		itemlist = xmldoc.getElementsByTagName(elms[1]) # Look for tag
-		if elms[3]: # elms[3]==True indicates we want a mere count of this tag
+		itemlist = xmldoc.getElementsByTagName(elms['tag']) # Look for tag
+		if elms['count']: # We only want a count of this tag
 			cur_list.append(len(itemlist))
-		else:       # elms[3]==False indicates we want a string with all found tags and attributes
+		else:
 			if (len(itemlist)==0): # Tag not found
 				cur_list.append('')
 			else: # Tag found
-				attrs = [i.getAttribute(cur_attr) for i in itemlist for cur_attr in elms[2]]
+				attrs = [i.getAttribute(cur_attr) for i in itemlist for cur_attr in elms['attr']]
+				if elms['get_unq']:
+					attrs = list(set(attrs))
 				s = '/'
-				if elms[4]:
-					l = len(elms[2])
+				if elms['fnd_blnk']:
+					l = len(elms['attr'])
 					try:
 						cur_index = attrs[0:-1:l].index('')
 					except ValueError:
 						cur_index = -1
-					if cur_index!=1:
+					if cur_index!=-1:
 						cur_index *= l
 						cur_list.append(s.join(attrs[cur_index+1:cur_index+l]))
 					else:
@@ -35,7 +37,7 @@ def xmls_2_xlsx(xml_file_folder, elms_attrs, output_file_name):
 	wb = Workbook()
 	# ws = wb.create_sheet()
 	ws = wb.active
-	ws.append([e[0] for e in elms_attrs])
+	ws.append([e['fld_name'] for e in elms_attrs])
 	cont = 0
 	t0 = time.perf_counter()
 	for arq in listdir(xml_file_folder):
@@ -52,36 +54,36 @@ def xmls_2_xlsx(xml_file_folder, elms_attrs, output_file_name):
 	return
 
 folder = "data/2021_04/"
-folder = "data/"
+# folder = "data/"
 
-xml_fields = [['Nome','DADOS-GERAIS',['NOME-COMPLETO'], False, False],
-	['País de nascimento','DADOS-GERAIS',['PAIS-DE-NASCIMENTO'], False, False],
-	['Data de atualização', 'CURRICULO-VITAE', ['DATA-ATUALIZACAO'], False, False],
-	['Id Lattes', 'CURRICULO-VITAE', ['NUMERO-IDENTIFICADOR'] , False, False],
-	['Instituição de atuação', 'ENDERECO-PROFISSIONAL', ['NOME-INSTITUICAO-EMPRESA','NOME-ORGAO','NOME-UNIDADE'], False, False],
-	['Vínculo', 'VINCULOS', ['ANO-FIM','OUTRO-ENQUADRAMENTO-FUNCIONAL-INFORMADO','OUTRO-VINCULO-INFORMADO','TIPO-DE-VINCULO'], False, True],
-	['País de atuação', 'ENDERECO-PROFISSIONAL', ['PAIS'], False, False],
-	['Cidade', 'ENDERECO-PROFISSIONAL', ['CIDADE'], False, False],
-	['Estado', 'ENDERECO-PROFISSIONAL', ['UF'], False, False],
-	['CEP', 'ENDERECO-PROFISSIONAL', ['CEP'], False, False],
-	['Doutorado (instituição/código/conclusão/obtenção)', 'DOUTORADO', ['NOME-INSTITUICAO','CODIGO-INSTITUICAO','ANO-DE-CONCLUSAO','ANO-DE-OBTENCAO-DO-TITULO'], False, False],
-	['Mestrado (instituição/código/conclusão/obtenção)', 'MESTRADO', ['NOME-INSTITUICAO','CODIGO-INSTITUICAO','ANO-DE-CONCLUSAO','ANO-DE-OBTENCAO-DO-TITULO'], False, False],
-	['Especialização (instituição/código/conclusão/obtenção)', 'ESPECIALIZACAO', ['NOME-INSTITUICAO','CODIGO-INSTITUICAO','ANO-DE-CONCLUSAO','ANO-DE-OBTENCAO-DO-TITULO'], False, False],
-	['Graduação (instituição/código/conclusão/obtenção)', 'GRADUACAO', ['NOME-INSTITUICAO','CODIGO-INSTITUICAO','ANO-DE-CONCLUSAO','ANO-DE-OBTENCAO-DO-TITULO'], False, False],
-	['Grande área de atuação', 'AREA-DE-ATUACAO', ['NOME-GRANDE-AREA-DO-CONHECIMENTO'], False, False],
-	['Área de atuação', 'AREA-DE-ATUACAO', ['NOME-DA-AREA-DO-CONHECIMENTO'], False, False],
-	['Sub-área de atuação', 'AREA-DE-ATUACAO', ['NOME-DA-SUB-AREA-DO-CONHECIMENTO'], False, False],
-	['Especialidade', 'AREA-DE-ATUACAO', ['NOME-DA-ESPECIALIDADE'], False, False],
-	['Trabalhos em eventos', 'TRABALHO-EM-EVENTOS', [''], True, False],
-	['Artigos publicados', 'ARTIGO-PUBLICADO', [''], True, False],
-	['Livros e capítulos', 'CAPITULO-DE-LIVRO-PUBLICADO', [''], True, False],
-	['Participação em projetos', 'PARTICIPACAO-EM-PROJETO', [''], True, False],
-	['Patentes', 'PATENTE', [''], True, False],
-	['Processos ou técnicas', 'PROCESSOS-OU-TECNICAS', [''], True, False],
-	['Trabalho técnico', 'TRABALHO-TECNICO', [''], True, False],
-	['Orientações (doutorado)', 'ORIENTACOES-CONCLUIDAS-PARA-DOUTORADO', [''], True, False],
-	['Orientações (mestrado)', 'ORIENTACOES-CONCLUIDAS-PARA-MESTRADO', [''], True, False],
-	['Orientações (outras)', 'OUTRAS-ORIENTACOES-CONCLUIDAS', [''], True, False],
+xml_fields = [{'fld_name':'Nome', 'tag':'DADOS-GERAIS', 'attr':['NOME-COMPLETO'], 'count':False, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'País de nascimento', 'tag':'DADOS-GERAIS', 'attr':['PAIS-DE-NASCIMENTO'], 'count':False, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Data de atualização', 'tag':'CURRICULO-VITAE', 'attr':['DATA-ATUALIZACAO'], 'count':False, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Id Lattes', 'tag':'CURRICULO-VITAE', 'attr':['NUMERO-IDENTIFICADOR'] , 'count':False, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Instituição de atuação', 'tag':'ENDERECO-PROFISSIONAL', 'attr':['NOME-INSTITUICAO-EMPRESA','NOME-ORGAO','NOME-UNIDADE'], 'count':False, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Vínculo', 'tag':'VINCULOS', 'attr':['ANO-FIM','OUTRO-ENQUADRAMENTO-FUNCIONAL-INFORMADO','OUTRO-VINCULO-INFORMADO','TIPO-DE-VINCULO'], 'count':False, 'fnd_blnk':True, 'get_unq':False},
+	{'fld_name':'País de atuação', 'tag':'ENDERECO-PROFISSIONAL', 'attr':['PAIS'], 'count':False, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Cidade', 'tag':'ENDERECO-PROFISSIONAL', 'attr':['CIDADE'], 'count':False, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Estado', 'tag':'ENDERECO-PROFISSIONAL', 'attr':['UF'], 'count':False, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'CEP', 'tag':'ENDERECO-PROFISSIONAL', 'attr':['CEP'], 'count':False, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Doutorado (instituição/código/conclusão/obtenção)', 'tag':'DOUTORADO', 'attr':['NOME-INSTITUICAO','CODIGO-INSTITUICAO','ANO-DE-CONCLUSAO','ANO-DE-OBTENCAO-DO-TITULO'], 'count':False, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Mestrado (instituição/código/conclusão/obtenção)', 'tag':'MESTRADO', 'attr':['NOME-INSTITUICAO','CODIGO-INSTITUICAO','ANO-DE-CONCLUSAO','ANO-DE-OBTENCAO-DO-TITULO'], 'count':False, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Especialização (instituição/código/conclusão/obtenção)', 'tag':'ESPECIALIZACAO', 'attr':['NOME-INSTITUICAO','CODIGO-INSTITUICAO','ANO-DE-CONCLUSAO','ANO-DE-OBTENCAO-DO-TITULO'], 'count':False, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Graduação (instituição/código/conclusão/obtenção)', 'tag':'GRADUACAO', 'attr':['NOME-INSTITUICAO','CODIGO-INSTITUICAO','ANO-DE-CONCLUSAO','ANO-DE-OBTENCAO-DO-TITULO'], 'count':False, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Grande área de atuação', 'tag':'AREA-DE-ATUACAO', 'attr':['NOME-GRANDE-AREA-DO-CONHECIMENTO'], 'count':False, 'fnd_blnk':False, 'get_unq':True},
+	{'fld_name':'Área de atuação', 'tag':'AREA-DE-ATUACAO', 'attr':['NOME-DA-AREA-DO-CONHECIMENTO'], 'count':False, 'fnd_blnk':False, 'get_unq':True},
+	{'fld_name':'Sub-área de atuação', 'tag':'AREA-DE-ATUACAO', 'attr':['NOME-DA-SUB-AREA-DO-CONHECIMENTO'], 'count':False, 'fnd_blnk':False, 'get_unq':True},
+	{'fld_name':'Especialidade', 'tag':'AREA-DE-ATUACAO', 'attr':['NOME-DA-ESPECIALIDADE'], 'count':False, 'fnd_blnk':False, 'get_unq':True},
+	{'fld_name':'Trabalhos em eventos', 'tag':'TRABALHO-EM-EVENTOS', 'attr':[''], 'count':True, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Artigos publicados', 'tag':'ARTIGO-PUBLICADO', 'attr':[''], 'count':True, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Livros e capítulos', 'tag':'CAPITULO-DE-LIVRO-PUBLICADO', 'attr':[''], 'count':True, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Participação em projetos', 'tag':'PARTICIPACAO-EM-PROJETO', 'attr':[''], 'count':True, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Patentes', 'tag':'PATENTE', 'attr':[''], 'count':True, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Processos ou técnicas', 'tag':'PROCESSOS-OU-TECNICAS', 'attr':[''], 'count':True, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Trabalho técnico', 'tag':'TRABALHO-TECNICO', 'attr':[''], 'count':True, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Orientações (doutorado)', 'tag':'ORIENTACOES-CONCLUIDAS-PARA-DOUTORADO', 'attr':[''], 'count':True, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Orientações (mestrado)', 'tag':'ORIENTACOES-CONCLUIDAS-PARA-MESTRADO', 'attr':[''], 'count':True, 'fnd_blnk':False, 'get_unq':False},
+	{'fld_name':'Orientações (outras)', 'tag':'OUTRAS-ORIENTACOES-CONCLUIDAS', 'attr':[''], 'count':True, 'fnd_blnk':False, 'get_unq':False},
 	]
 
 # País de atuação vs país de graduação - atuação ok, graduação não
