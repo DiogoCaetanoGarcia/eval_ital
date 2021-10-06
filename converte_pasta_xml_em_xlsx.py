@@ -2,7 +2,9 @@ from xml.dom import minidom
 from os import listdir, path
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, PieChart, Reference
+from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog
 import time
+import sys
 
 def find_fields(xml_file_name, elms_attrs):
 	xmldoc = minidom.parse(xml_file_name) # Read XML file
@@ -75,12 +77,25 @@ def xmls_2_xlsx(xml_file_folder, elms_attrs, analysis_list, chart_data, output_f
 		chart.set_categories(cats)
 		cs = wb.create_chartsheet(c[2])
 		cs.add_chart(chart)
-	newfilename = path.abspath(output_file_name)
-	wb.save(newfilename)
+	#newfilename = path.abspath(output_file_name)
+	wb.save(output_file_name)
 	return
 
-folder = "data/2021_04/"
-# folder = "data/"
+# class filedialogdemo(QWidget):
+# 	def __init__(self, parent = None):
+# 		super(filedialogdemo, self).__init__(parent)
+# 		self.folder = QFileDialog.getExistingDirectory(self, 'Escolha a pasta')
+# 		self.output_file_name = QFileDialog.getSaveFileName(self, 'Escolha o nome do arquivo de saída', 'c:\\',"Image files (*.xlsx)")
+
+class dialogo(QWidget):
+	def __init__(self, parent=None):
+		QWidget.__init__(self, parent)
+		self.folder = "data/2021_04/" # folder = "data/"
+		self.output_file_name = "xml_to_excel.xlsx"
+		dialog = QFileDialog()
+		self.folder = dialog.getExistingDirectory(self, 'Escolha a pasta')
+		self.folder = self.folder + '/'
+		self.output_file_name, _ = dialog.getSaveFileName(self, 'Escolha o nome do arquivo de saída', "", "Excel files (*.xlsx)")
 
 xml_fields = [{'fld_name':'Nome', 'tag':'DADOS-GERAIS', 'attr':['NOME-COMPLETO'], 'count':False, 'fnd_blnk':False, 'get_unq':False},
 	{'fld_name':'País de nascimento', 'tag':'DADOS-GERAIS', 'attr':['PAIS-DE-NASCIMENTO'], 'count':False, 'fnd_blnk':False, 'get_unq':False},
@@ -173,4 +188,7 @@ chart_data = [['BarChart', 'bar', 'Formação', 'Formação', '', 'Contagem', [2
 # Separar brasileiros formados na Itália (graduação etc.)
 # EXTRA: Buscar Web of science e Scopus
 # https://openpyxl.readthedocs.io/en/stable/usage.html
-xmls_2_xlsx(folder, xml_fields, analysis_list, chart_data, "xml_to_excel.xlsx")
+
+app = QApplication(sys.argv)
+d = dialogo()
+xmls_2_xlsx(d.folder, xml_fields, analysis_list, chart_data, d.output_file_name)
