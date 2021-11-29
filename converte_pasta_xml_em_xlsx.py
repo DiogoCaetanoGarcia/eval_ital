@@ -5,6 +5,7 @@ from openpyxl.chart import BarChart, PieChart, Reference
 from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog
 import time
 import sys
+from collections import Counter
 
 def find_fields(xml_file_name, elms_attrs):
 	xmldoc = minidom.parse(xml_file_name) # Read XML file
@@ -36,6 +37,31 @@ def find_fields(xml_file_name, elms_attrs):
 					cur_list.append(s.join(attrs))
 	return cur_list
 
+def simple_hist(cur_list):
+	cur_dict = dict(Counter(cur_list))
+	if '' in cur_dict.keys():
+		cur_dict["Não-informado"] = cur_dict.pop('')
+	return [[dk, cur_dict[dk], cur_dict[dk]/len(cur_list)] for dk in cur_dict.keys()]
+
+def count_prod(prod_vals):
+	prod_cnt = [sum([int(cur_p) for cur_p in prod_vals])]
+	prod_cnt.append(prod_cnt[0]/len(prod_vals))
+	return prod_cnt
+
+def count_areas(areas_vals):
+	full_count = len(areas_vals)
+	areas_keys = set("/".join(areas_vals).split("/"))
+	areas = []
+	for ak in areas_keys:
+		if len(ak)>0:
+			cur_area = [ak,sum([ak in g for g in areas_vals])]
+		else:
+			cur_area = ["Não-informado",sum([len(g)==0 for g in areas_vals])]
+		cur_area.append(cur_area[1]/full_count)
+		areas.append(cur_area)
+	areas.sort(key=lambda sort_key: sort_key[1], reverse=True)
+	return areas
+
 def xmls_2_xlsx(xml_file_folder, elms_attrs, analysis_list, chart_data, output_file_name):
 	wb = Workbook()
 	ws = wb.create_sheet('Dados')
@@ -44,23 +70,76 @@ def xmls_2_xlsx(xml_file_folder, elms_attrs, analysis_list, chart_data, output_f
 	ws.append([e['fld_name'] for e in elms_attrs])
 	cont = 0
 	t0 = time.perf_counter()
+	cur_list = []
 	for arq in listdir(xml_file_folder):
 		if arq[-4:] == '.xml':
 			cont += 1
 			# if cont<=100:
-			ws.append(find_fields(xml_file_folder+arq, elms_attrs))
+			cur_list.append(find_fields(xml_file_folder+arq, elms_attrs))
+			ws.append(cur_list[-1])
 			if cont % 100 == 0:
 				t1 = time.perf_counter() 
 				print("%d: %s (%f s)" % (cont,arq,t1-t0))
 				t0 = t1
+	# for cl in cur_list:
+	# 	print(cl)
+	# print("")
+	# Contagem de países
+	paises = simple_hist([cl[1] for cl in cur_list])
+	print("----- Contagem de países de origem listados -----")
+	[print("%s: %d / %d%%" % (pais_results[0],pais_results[1],pais_results[2]*100+0.5)) for pais_results in paises]
+	print("")
+	brasileiros = [cl for cl in cur_list if cl[1]=="Brasil"]
+	italianos = [cl for cl in cur_list if cl[1]=="Itália"]
+	N_italianos = len(italianos)
+	# Contagem de italianos por estado
+	italianos_estado = simple_hist([cl[8] for cl in italianos])
+	print("----- Contagem de italianos por estado brasileiro -----")
+	[print("%s: %d / %d%%" % (est_results[0],est_results[1],est_results[2]*100+0.5)) for est_results in italianos_estado]
+	print("")
+	# Contagem ordenada de produções dos italianos
+	prod_lbls = ["Trabalhos em eventos", "Artigos publicados", "Livros e capítulos", "Participação em projetos", "Patentes", "Processos ou técnicas", "Trabalho técnico", "Orientações (doutorado)", "Orientações (mestrado)", "Orientações (outras)"]
+	prods = []
+	for k in range(len(prod_lbls)):
+		cur_prod = count_prod([p[k+18] for p in italianos])
+		prods.append([prod_lbls[k],cur_prod[0], cur_prod[1]])
+	prods.sort(key=lambda sort_key: sort_key[1], reverse=True)
+	print("----- Produção -----")
+	[print("%s: %d / %f" % (ps[0], ps[1], ps[2])) for ps in prods]
+	print("")
+	areas_keys = ["Grande área de atuação", "Área de atuação", "Sub-área de atuação", "Especialidade"]
+	areas_cnts = []
+	for k in range(len(areas_keys)):
+		# Contagem ordenada de grandes areas dos italianos
+		areas_cnts.append(count_areas([cl[k+14] for cl in italianos]))
+		print("----- " + areas_keys[k] + " -----")
+		[print("%s: %d / %f" % (s[0], s[1], s[2])) for s in areas_cnts[-1]]
+		print("")
+
+	# Contagem de doutorados, mestrados etc
+	formacao_lbls = ["Doutorado", "Mestrado", "Especialização","Graduação"]
+	formacao = []
+	for k in range(len(formacao_lbls)):
+		# [print("%s: %s" % (p[0], p[k+10])) for p in italianos]
+		# print("----------")
+		cur_formacao = [formacao_lbls[k],sum([len(p[k+10])>0 for p in italianos])]
+		cur_formacao.append(cur_formacao[1]/N_italianos)
+		formacao.append(cur_formacao)
+	formacao.sort(key=lambda sort_key: sort_key[1], reverse=True)
+	[print("%s: %d / %d%%" % (ps[0], ps[1], ps[2]*100+0.5)) for ps in formacao]
+	print("")
+
 	wb.create_sheet('Italianos')
 	ws = wb.get_sheet_by_name('Italianos')
 	ws.append(['=ARRAYFORMULA({Dados!A1,Dados!C1:AB1})'])
 	ws.append(['=FILTER({Dados!A:A,Dados!C:AB}, Dados!B:B="Itália")'])
 	wb.create_sheet('Análises')
 	ws = wb.get_sheet_by_name('Análises')
-	ws.append([i[0] for i in analysis_list])
-	ws.append([i[1] for i in analysis_list])
+	N = max([len(al1) for al1 in analysis_list])
+	for i in range(N):
+		ws.append([j[i] if len(j)>i else '' for j in analysis_list])
+	# ws.append([i[0] for i in analysis_list])
+	# ws.append([i[1] for i in analysis_list])
 	for c in chart_data:
 		if c[0]=='BarChart':
 			chart = BarChart()
@@ -126,8 +205,8 @@ xml_fields = [{'fld_name':'Nome', 'tag':'DADOS-GERAIS', 'attr':['NOME-COMPLETO']
 	{'fld_name':'Orientações (mestrado)', 'tag':'ORIENTACOES-CONCLUIDAS-PARA-MESTRADO', 'attr':[''], 'count':True, 'fnd_blnk':False, 'get_unq':False},
 	{'fld_name':'Orientações (outras)', 'tag':'OUTRAS-ORIENTACOES-CONCLUIDAS', 'attr':[''], 'count':True, 'fnd_blnk':False, 'get_unq':False},
 	]
-analysis_list = [['Total de italianos', '=COUNTIF(Dados!B:B,"Itália")'],
-	['', ''],
+analysis_list = [['Total de italianos', '=COUNTIF(Dados!B:B;"Itália")'],
+	[],
 	['País de nascimento', '=SORT(UNIQUE(Dados!B2:B1048576))'],
 	['Contagem', '=ARRAYFORMULA(COUNTIF(Dados!B2:B1048576,SORT(UNIQUE(Dados!B2:B1048576))))'],
 	['', ''],
@@ -189,6 +268,7 @@ chart_data = [['BarChart', 'bar', 'Formação', 'Formação', '', 'Contagem', [2
 # EXTRA: Buscar Web of science e Scopus
 # https://openpyxl.readthedocs.io/en/stable/usage.html
 
-app = QApplication(sys.argv)
-d = dialogo()
-xmls_2_xlsx(d.folder, xml_fields, analysis_list, chart_data, d.output_file_name)
+# app = QApplication(sys.argv)
+# d = dialogo()
+# xmls_2_xlsx(d.folder, xml_fields, analysis_list, chart_data, d.output_file_name)
+xmls_2_xlsx('./data/', xml_fields, analysis_list, chart_data, './data/xml_to_excel.xlsx')
