@@ -5,6 +5,7 @@ from openpyxl.chart import BarChart, PieChart, Reference
 from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog
 import time
 import sys
+import re
 from collections import Counter
 
 def find_fields(xml_file_name, elms_attrs):
@@ -43,6 +44,19 @@ def simple_hist(cur_list):
 		cur_dict["Não-informado"] = cur_dict.pop('')
 	return [[dk, cur_dict[dk], cur_dict[dk]/len(cur_list)] for dk in cur_dict.keys()]
 
+def f_remove_accents(old):
+	new = old.lower()
+	new = re.sub(r'[àáâãäå]', 'a', new)
+	new = re.sub(r'[èéêë]', 'e', new)
+	new = re.sub(r'[ìíîï]', 'i', new)
+	new = re.sub(r'[òóôõöð]', 'o', new)
+	new = re.sub(r'[ùúûü]', 'u', new)
+	new = re.sub(r'[š]', 's', new)
+	new = re.sub(r'[ž]', 'z', new)
+	new = re.sub(r'[ýÿ]', 'y', new)
+	new = re.sub(r'[ñ]', 'n', new)
+	return new
+
 def count_prod(prod_vals):
 	prod_cnt = [sum([int(cur_p) for cur_p in prod_vals])]
 	prod_cnt.append(prod_cnt[0]/len(prod_vals))
@@ -61,6 +75,18 @@ def count_areas(areas_vals):
 		areas.append(cur_area)
 	areas.sort(key=lambda sort_key: sort_key[1], reverse=True)
 	return areas
+
+def count_prods(prods_vals, prods_keys=[]):
+	full_count = len(prods_vals)
+	if len(prods_keys)==0:
+		prods_keys = set("/".join(prods_vals).split("/"))
+	prods = []
+	for ak in prods_keys:
+		if len(prods)==0:
+			prods = [ak in g for g in prods_vals]
+		else:
+			prods = [a or b for a,b in zip(prods, [ak in g for g in prods_vals])]
+	return sum(prods)
 
 def xmls_2_xlsx(xml_file_folder, elms_attrs, analysis_list, chart_data, output_file_name):
 	wb = Workbook()
@@ -85,11 +111,28 @@ def xmls_2_xlsx(xml_file_folder, elms_attrs, analysis_list, chart_data, output_f
 	# 	print(cl)
 	# print("")
 	# Contagem de países
+
+	# Contagem de brasileiros com doutorados, mestrados etc. na Itália
+	brasileiros = [cl for cl in cur_list if cl[1]=="Brasil"]
+	N_brasileiros = len(brasileiros)
+	formacao_lbls = ["Doutorado", "Mestrado", "Especialização","Graduação"]
+	palavras_italianas = ["universita ", "accademia ", "associazione ", "internazionale ", "ricerche ", "istituto ", "studi "]
+	formacao = []
+	for k in range(len(formacao_lbls)):
+		cur_f = [f_remove_accents(p[k+10]) for p in brasileiros]
+		cur_formacao = [formacao_lbls[k],
+			count_prods(cur_f, palavras_italianas)]
+		cur_formacao.append(cur_formacao[1]/N_brasileiros)
+		formacao.append(cur_formacao)
+	formacao.sort(key=lambda sort_key: sort_key[1], reverse=True)
+	print("----- Brasileiros com formação na Itália -----")
+	[print("%s: %d / %d%%" % (ps[0], ps[1], ps[2]*100+0.5)) for ps in formacao]
+	print("")
+
 	paises = simple_hist([cl[1] for cl in cur_list])
 	print("----- Contagem de países de origem listados -----")
 	[print("%s: %d / %d%%" % (pais_results[0],pais_results[1],pais_results[2]*100+0.5)) for pais_results in paises]
 	print("")
-	brasileiros = [cl for cl in cur_list if cl[1]=="Brasil"]
 	italianos = [cl for cl in cur_list if cl[1]=="Itália"]
 	N_italianos = len(italianos)
 	# Contagem de italianos por estado
@@ -104,7 +147,7 @@ def xmls_2_xlsx(xml_file_folder, elms_attrs, analysis_list, chart_data, output_f
 		cur_prod = count_prod([p[k+18] for p in italianos])
 		prods.append([prod_lbls[k],cur_prod[0], cur_prod[1]])
 	prods.sort(key=lambda sort_key: sort_key[1], reverse=True)
-	print("----- Produção -----")
+	print("----- Produção italiana -----")
 	[print("%s: %d / %f" % (ps[0], ps[1], ps[2])) for ps in prods]
 	print("")
 	areas_keys = ["Grande área de atuação", "Área de atuação", "Sub-área de atuação", "Especialidade"]
@@ -116,7 +159,7 @@ def xmls_2_xlsx(xml_file_folder, elms_attrs, analysis_list, chart_data, output_f
 		[print("%s: %d / %f" % (s[0], s[1], s[2])) for s in areas_cnts[-1]]
 		print("")
 
-	# Contagem de doutorados, mestrados etc
+	# Contagem de italianos com doutorados, mestrados etc
 	formacao_lbls = ["Doutorado", "Mestrado", "Especialização","Graduação"]
 	formacao = []
 	for k in range(len(formacao_lbls)):
@@ -126,6 +169,7 @@ def xmls_2_xlsx(xml_file_folder, elms_attrs, analysis_list, chart_data, output_f
 		cur_formacao.append(cur_formacao[1]/N_italianos)
 		formacao.append(cur_formacao)
 	formacao.sort(key=lambda sort_key: sort_key[1], reverse=True)
+	print("----- Formação italiana -----")
 	[print("%s: %d / %d%%" % (ps[0], ps[1], ps[2]*100+0.5)) for ps in formacao]
 	print("")
 
