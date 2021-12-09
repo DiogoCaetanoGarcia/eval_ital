@@ -150,6 +150,8 @@ def write_cells_chart(cur_workbook, sheet_name, data_header, data_vals, col_num,
 		min_row=row_num+1, max_row=row_num+len(data_vals))
 	chart.add_data(data, titles_from_data=True)
 	chart.set_categories(cats)
+	if chart_sheetname in cur_workbook.sheetnames:
+		del cur_workbook[chart_sheetname]
 	cs = cur_workbook.create_chartsheet(chart_sheetname)
 	cs.add_chart(chart)
 
@@ -182,7 +184,28 @@ def xmls_2_xlsx(xml_file_folder, elms_attrs, output_file_name):
 		rows_iter = ws.iter_rows(min_col = 1, min_row = 2, max_col = 28, max_row = 5634)
 		cur_list = [[cell.value if cell.value is not None else '' for cell in list(row)] for row in rows_iter]
 
+	italianos_no_brasil = [cl for cl in cur_list if cl[1]=="Itália"]
+	italianos_no_brasil = [cl for cl in italianos_no_brasil if cl[6]=="Brasil"]
+	if 'Italianos_no_Brasil' in wb.sheetnames:
+		del wb['Italianos_no_Brasil']
+	wb.create_sheet('Italianos_no_Brasil')
+	write_cells(wb['Italianos_no_Brasil'], 
+		[ett['fld_name'] for ett in elms_attrs],
+		italianos_no_brasil, 1, 1)
+
+	palavras_italianas = ["universita ", "accademia ", "associazione ", "internazionale ", "ricerche ", "istituto ", "studi "]
+	brasileiros_na_italia = [cl for cl in cur_list if cl[1]=="Brasil"]
+	brasileiros_na_italia = [cl for cl in brasileiros_na_italia if any(s in f_remove_accents(cl[10]) for s in palavras_italianas) or any(s in f_remove_accents(cl[11]) for s in palavras_italianas) or any(s in f_remove_accents(cl[12]) for s in palavras_italianas) or any(s in f_remove_accents(cl[13]) for s in palavras_italianas)]
+	if 'Brasileiros_na_Italia' in wb.sheetnames:
+		del wb['Brasileiros_na_Italia']
+	wb.create_sheet('Brasileiros_na_Italia')
+	write_cells(wb['Brasileiros_na_Italia'], 
+		[ett['fld_name'] for ett in elms_attrs],
+		brasileiros_na_italia, 1, 1)
+
 	# Criar análises e gráficos
+	if 'Análises' in wb.sheetnames:
+		del wb['Análises']
 	wb.create_sheet('Análises')
 	ws = wb['Análises']
 	output_fig_dir = os.path.dirname(output_file_name) + "/"
