@@ -47,23 +47,28 @@ def simple_hist(cur_list, calc_perc=True):
 	cur_dict = dict(Counter(cur_list))
 	if '' in cur_dict.keys():
 		cur_dict["Não-informado"] = cur_dict.pop('')
+	cur_hist = [[dk, cur_dict[dk]] for dk in cur_dict.keys()]
+	cur_hist.sort(key=lambda sort_key: sort_key[1], reverse=True)
 	if calc_perc:
-		return [[dk, cur_dict[dk], cur_dict[dk]/len(cur_list)] for dk in cur_dict.keys()]
+		return [[ch[0], ch[1], ch[1]/len(cur_list)] for ch in cur_hist]
 	else:
-		return [[dk, cur_dict[dk]] for dk in cur_dict.keys()]
+		return cur_hist
 
 def f_remove_accents(old):
-	new = old.lower()
-	new = re.sub(r'[àáâãäå]', 'a', new)
-	new = re.sub(r'[èéêë]', 'e', new)
-	new = re.sub(r'[ìíîï]', 'i', new)
-	new = re.sub(r'[òóôõöð]', 'o', new)
-	new = re.sub(r'[ùúûü]', 'u', new)
-	new = re.sub(r'[š]', 's', new)
-	new = re.sub(r'[ž]', 'z', new)
-	new = re.sub(r'[ýÿ]', 'y', new)
-	new = re.sub(r'[ñ]', 'n', new)
-	return new
+	if type(old) is str:
+		new = old.lower()
+		new = re.sub(r'[àáâãäå]', 'a', new)
+		new = re.sub(r'[èéêë]', 'e', new)
+		new = re.sub(r'[ìíîï]', 'i', new)
+		new = re.sub(r'[òóôõöð]', 'o', new)
+		new = re.sub(r'[ùúûü]', 'u', new)
+		new = re.sub(r'[š]', 's', new)
+		new = re.sub(r'[ž]', 'z', new)
+		new = re.sub(r'[ýÿ]', 'y', new)
+		new = re.sub(r'[ñ]', 'n', new)
+		return new
+	else:
+		return ''
 
 def count_prod(prod_vals):
 	prod_cnt = [sum([int(cur_p) for cur_p in prod_vals])]
@@ -114,10 +119,11 @@ def write_cells_chart(cur_workbook, sheet_name, data_header, data_vals, col_num,
 	if chart_type=='BarChart':
 		cur_labels = [d[0] for d in data_vals]
 		cur_data   = [d[1] for d in data_vals]
-		fig = plt.figure() #figsize=[15, 5])
+		fig = plt.figure() #figsize=[10, 15])
 		plt.barh(cur_labels, cur_data)
 		plt.xlabel(chart_axis_titles[0])
 		plt.ylabel(chart_axis_titles[1])
+		# plt.yticks(rotation=30)
 		plt.grid(True)
 		plt.title(chart_title)
 		plt.tight_layout()
@@ -148,26 +154,33 @@ def write_cells_chart(cur_workbook, sheet_name, data_header, data_vals, col_num,
 	cs.add_chart(chart)
 
 def xmls_2_xlsx(xml_file_folder, elms_attrs, output_file_name):
-	# Criação do arquivo Excel
-	wb = Workbook()
-	ws = wb.create_sheet('Dados')
-	del wb['Sheet']
-	ws = wb['Dados']
-	ws.append([e['fld_name'] for e in elms_attrs])
-	cont = 0
-	t0 = time.perf_counter()
-	cur_list = []
-	# Salvando resultados de cada arquivo XML no Excel
-	for arq in listdir(xml_file_folder):
-		if arq[-4:] == '.xml':
-			cont += 1
-			# if cont<=100:
-			cur_list.append(find_fields(xml_file_folder+arq, elms_attrs))
-			ws.append(cur_list[-1])
-			if cont % 100 == 0:
-				t1 = time.perf_counter() 
-				print("%d: %s (%f s)" % (cont,arq,t1-t0))
-				t0 = t1
+	if 1:
+		# Criação do arquivo Excel
+		wb = Workbook()
+		ws = wb.create_sheet('Dados')
+		del wb['Sheet']
+		ws = wb['Dados']
+		ws.append([e['fld_name'] for e in elms_attrs])
+		cont = 0
+		t0 = time.perf_counter()
+		cur_list = []
+		# Salvando resultados de cada arquivo XML no Excel
+		for arq in listdir(xml_file_folder):
+			if arq[-4:] == '.xml':
+				cont += 1
+				# if cont<=100:
+				cur_list.append(find_fields(xml_file_folder+arq, elms_attrs))
+				ws.append(cur_list[-1])
+				if cont % 100 == 0:
+					t1 = time.perf_counter() 
+					print("%d: %s (%f s)" % (cont,arq,t1-t0))
+					t0 = t1
+	else:
+		from openpyxl import load_workbook
+		wb = load_workbook(filename = output_file_name)
+		ws = wb['Dados']
+		rows_iter = ws.iter_rows(min_col = 1, min_row = 2, max_col = 28, max_row = 5634)
+		cur_list = [[cell.value if cell.value is not None else '' for cell in list(row)] for row in rows_iter]
 
 	# Criar análises e gráficos
 	wb.create_sheet('Análises')
@@ -209,8 +222,8 @@ def xmls_2_xlsx(xml_file_folder, elms_attrs, output_file_name):
 	
 	# Contagem de italianos por estado brasileiro, salvando resultados no arquivo Excel e em um gráfico PNG
 	italianos_estado = simple_hist([cl[8] for cl in italianos], False)
-	write_cells_chart(wb, 'Análises', ["Estado", "Contagem"], italianos_estado,
-		6, 1, "PieChart", 'Italianos por estado', ['', 'Contagem'], "Italianos_estado", output_fig_dir)
+	write_cells_chart(wb, 'Análises', ["Estado", "Contagem"], italianos_estado, 6, 1,
+		"BarChart", 'Italianos por estado', ['Contagem', ''], "Italianos_estado", output_fig_dir)
 	imgs_matplotlib.append("Italianos_estado")
 
 	# Contagem ordenada de produções dos italianos
@@ -267,8 +280,10 @@ def xmls_2_xlsx(xml_file_folder, elms_attrs, output_file_name):
 class dialogo(QWidget):
 	def __init__(self, parent=None):
 		QWidget.__init__(self, parent)
-		self.folder = "data/2021_04/" # folder = "data/"
-		self.output_file_name = "xml_to_excel.xlsx"
+		# self.folder = "data/2021_04/"
+		# self.output_file_name = "outputs/xml_to_excel.xlsx"
+		# self.folder = "data/"
+		# self.output_file_name = "outputs/a.xlsx"
 		dialog = QFileDialog()
 		self.folder = dialog.getExistingDirectory(self, 'Escolha a pasta')
 		self.folder = self.folder + '/'
